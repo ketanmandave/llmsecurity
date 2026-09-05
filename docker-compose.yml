@@ -1,0 +1,55 @@
+services:
+  api:
+    build:
+      context: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-secure_rag}:${POSTGRES_PASSWORD:-secure_rag}@database:5432/${POSTGRES_DB:-secure_rag}
+      REDIS_URL: redis://redis:6379/0
+      UPLOAD_DIRECTORY: /app/uploads
+      MODEL_CACHE_DIRECTORY: /home/appuser/.cache/fastembed
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - embedding_cache:/home/appuser/.cache
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  database:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-secure_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-secure_rag}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_rag}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - secure_rag_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secure_rag} -d ${POSTGRES_DB:-secure_rag}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  secure_rag_postgres:
+  embedding_cache:

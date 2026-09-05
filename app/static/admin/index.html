@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Secure RAG · Admin</title>
+  <link rel="stylesheet" href="/admin/assets/styles.css?v=20260905-4">
+  <script src="/admin/assets/app.js?v=20260905-4" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/admin" aria-label="Secure RAG admin home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5l-8-3Z"/><path d="m8.8 12 2.1 2.1 4.7-5"/></svg>
+        </span>
+        <span><strong>Secure RAG</strong><small>Admin console</small></span>
+      </a>
+
+      <nav aria-label="Main navigation">
+        <button class="nav-item active" data-scroll="overview">
+          <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></svg>
+          Overview
+        </button>
+        <button class="nav-item" data-scroll="upload-panel">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg>
+          Upload document
+        </button>
+        <button class="nav-item" data-scroll="library-panel">
+          <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Zm0 0V19m4-11h8m-8 4h6"/></svg>
+          Document library
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <span class="lock-icon" aria-hidden="true">◆</span>
+        <strong>Role-enforced retrieval</strong>
+        <p>Permissions are applied inside the vector query, never by the browser.</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <span class="service-dot" id="service-dot"></span>
+        <span><strong id="service-label">Checking service</strong><small id="service-detail">Please wait…</small></span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Knowledge governance</p>
+          <h1>Document control center</h1>
+        </div>
+        <div class="admin-session hidden" id="admin-session">
+          <span class="avatar">A</span>
+          <span><strong id="admin-name">Administrator</strong><small>Verified admin</small></span>
+          <button class="icon-button" id="logout-button" title="Disconnect" aria-label="Disconnect admin session">
+            <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5m5 5H3m10-9h7v18h-7"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="connection-card" id="connection-card">
+        <div class="connection-copy">
+          <span class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M8 11V8a4 4 0 0 1 8 0v3m-9 0h10a2 2 0 0 1 2 2v7H5v-7a2 2 0 0 1 2-2Z"/></svg>
+          </span>
+          <div>
+            <p class="eyebrow">Secure access</p>
+            <h2>Connect your admin session</h2>
+            <p>Paste a short-lived JWT issued by your company backend. It stays only in this browser tab.</p>
+          </div>
+        </div>
+        <form id="token-form" class="token-form">
+          <label for="token-input">Admin bearer token</label>
+          <div class="token-row">
+            <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="eyJhbGciOi…" required>
+            <button class="button primary" type="submit"><span>Connect</span><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+          </div>
+          <p class="field-help">The role claim must include <code>admin</code>.</p>
+        </form>
+      </section>
+
+      <div id="dashboard" class="dashboard-content locked" aria-live="polite">
+        <section class="metrics-grid" id="overview" aria-label="Document overview">
+          <article class="metric-card accent-indigo">
+            <div><span>Total documents</span><strong id="metric-total">—</strong><small>All uploaded records</small></div>
+            <span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7V3Zm7 0v5h5M10 12h5m-5 4h5"/></svg></span>
+          </article>
+          <article class="metric-card accent-green">
+            <div><span>Active</span><strong id="metric-active">—</strong><small>Available for retrieval</small></div>
+            <span class="metric-icon"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>
+          </article>
+          <article class="metric-card accent-amber">
+            <div><span>Processing</span><strong id="metric-processing">—</strong><small>Embedding in progress</small></div>
+            <span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3v4m0 10v4m9-9h-4M7 12H3m15.4-6.4-2.8 2.8M8.4 15.6l-2.8 2.8m12.8 0-2.8-2.8M8.4 8.4 5.6 5.6"/></svg></span>
+          </article>
+          <article class="metric-card accent-red">
+            <div><span>Needs attention</span><strong id="metric-attention">—</strong><small>Failed or quarantined</small></div>
+            <span class="metric-icon"><svg viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Zm0 6v5m0 3h.01"/></svg></span>
+          </article>
+        </section>
+
+        <section class="panel upload-panel" id="upload-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Add knowledge</p>
+              <h2>Upload a protected document</h2>
+              <p>Choose the exact roles allowed to retrieve chunks from this PDF.</p>
+            </div>
+            <span class="step-pill">1 PDF at a time</span>
+          </div>
+
+          <form id="upload-form" class="upload-form">
+            <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-describedby="file-rules">
+              <input id="file-input" name="file" type="file" accept="application/pdf,.pdf" required>
+              <div class="upload-glyph"><svg viewBox="0 0 24 24"><path d="M12 15V5m0 0L8 9m4-4 4 4M5 14v5h14v-5"/></svg></div>
+              <strong id="drop-title">Drop your PDF here</strong>
+              <span>or <u>browse from your computer</u></span>
+              <small id="file-rules">PDF only · maximum size loading…</small>
+              <div class="selected-file hidden" id="selected-file">
+                <span class="pdf-badge">PDF</span>
+                <span><strong id="selected-file-name"></strong><small id="selected-file-size"></small></span>
+                <button type="button" id="clear-file" aria-label="Remove selected file">×</button>
+              </div>
+            </div>
+
+            <div class="form-fields">
+              <div class="field full-field">
+                <label for="document-name">Document name</label>
+                <input id="document-name" name="name" maxlength="255" placeholder="e.g. Employee Leave Policy 2026" required>
+                <span class="field-help">Use a clear name administrators can recognize later.</span>
+              </div>
+
+              <fieldset class="field role-field">
+                <legend>Allowed roles <span>Required</span></legend>
+                <p>Select everyone who may retrieve information from this document.</p>
+                <div class="role-options" id="role-options"></div>
+              </fieldset>
+
+              <div class="field classification-field">
+                <label for="classification">Classification</label>
+                <select id="classification" name="classification"></select>
+                <span class="classification-help" id="classification-help"></span>
+              </div>
+            </div>
+
+            <div class="upload-footer">
+              <div class="security-note">
+                <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.6 7 10 4.1-1.4 7-5.4 7-10V6l-7-3Zm-3 9 2 2 4-5"/></svg>
+                <span><strong>Security checks included</strong> PII redaction and injection scanning run before indexing.</span>
+              </div>
+              <button class="button primary upload-button" id="upload-button" type="submit">
+                <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg>
+                <span>Upload and process</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel library-panel" id="library-panel">
+          <div class="panel-heading library-heading">
+            <div>
+              <p class="eyebrow">Access inventory</p>
+              <h2>Document library</h2>
+            </div>
+            <div class="library-actions">
+              <label class="search-box">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+                <input id="search-input" type="search" placeholder="Search documents…" aria-label="Search documents">
+              </label>
+              <button class="button secondary" id="refresh-button" type="button">
+                <svg viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5m9.5-4A7 7 0 0 0 6 6.5L4 11m16 2-2 4.5A7 7 0 0 1 5.5 15"/></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Document</th><th>Access roles</th><th>Classification</th><th>Status</th><th>Uploaded</th><th><span class="sr-only">Actions</span></th></tr></thead>
+              <tbody id="document-rows"></tbody>
+            </table>
+            <div class="empty-state hidden" id="empty-state">
+              <span><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7V3Zm7 0v5h5M10 13h5"/></svg></span>
+              <h3>No documents found</h3>
+              <p>Upload your first PDF or change the current search.</p>
+            </div>
+            <div class="loading-state" id="loading-state"><span class="spinner"></span>Loading protected documents…</div>
+          </div>
+          <div class="pagination-bar">
+            <span id="page-summary">Showing 0 documents</span>
+            <div><button class="icon-button" id="previous-page" aria-label="Previous page">‹</button><span id="page-number">Page 1</span><button class="icon-button" id="next-page" aria-label="Next page">›</button></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="access-dialog">
+    <form method="dialog" class="dialog-card" id="access-form">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Permission management</p><h2>Update document access</h2><p id="access-document-name"></p></div>
+        <button class="icon-button" value="cancel" aria-label="Close dialog">×</button>
+      </div>
+      <fieldset><legend>Roles that can retrieve this document</legend><div class="role-options" id="dialog-role-options"></div></fieldset>
+      <div class="dialog-warning"><strong>Complete replacement</strong><span>Saving replaces the document’s current role list immediately. Existing embeddings remain unchanged.</span></div>
+      <div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button primary" id="save-access" value="default">Save permissions</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+</body>
+</html>
