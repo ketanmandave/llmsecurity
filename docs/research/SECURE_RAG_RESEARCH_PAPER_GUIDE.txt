@@ -1,0 +1,1088 @@
+SECURE ROLE-AWARE RAG: RESEARCH PAPER PREPARATION GUIDE
+========================================================
+
+Generated for the SentinelAI College / Secure RAG project
+Date: 13 October 2026
+
+PURPOSE OF THIS FILE
+--------------------
+This file contains the information, structure, experiment plan, citation map,
+and writing precautions needed to prepare a research paper about the current
+role-aware Retrieval-Augmented Generation (RAG) system.
+
+Important research-integrity rule:
+Do not insert invented accuracy, latency, security, or retrieval results. The
+existing evaluation JSON represents a small engineering smoke test, not a
+statistically meaningful research evaluation. Replace every [PLACEHOLDER] in
+this guide only after running and documenting a proper experiment.
+
+
+1. RECOMMENDED PAPER TITLE
+--------------------------
+
+Recommended title:
+Design and Evaluation of a Secure Role-Aware Retrieval-Augmented Generation
+System for Enterprise Documents
+
+Alternative titles:
+1. Secure Enterprise RAG with Role-Constrained Retrieval and Grounded Citations
+2. A Role-Based Access-Controlled RAG Pipeline for Confidential Organizational
+   Knowledge
+3. Integrating Document-Level Authorization and Security Controls into an
+   Enterprise RAG System
+
+Avoid titles such as "Completely Secure RAG" or "Hallucination-Free RAG" because
+the implementation reduces risks but cannot prove that all attacks or
+hallucinations are eliminated.
+
+
+2. CENTRAL RESEARCH IDEA
+------------------------
+
+One-sentence description:
+The proposed system combines retrieval-augmented generation with role-based
+document permissions so that an authenticated user can retrieve and use only
+the organizational information permitted for that user's current database
+roles.
+
+Problem statement:
+Normal RAG systems can retrieve semantically relevant passages without checking
+whether the requesting user is authorized to see the source document. In an
+enterprise environment, this can expose confidential HR, management, finance,
+or internal policy information. RAG applications also face prompt injection,
+sensitive-data leakage, irrelevant retrieval, unsupported answers, and unsafe
+output risks. A practical system therefore needs retrieval quality and security
+controls to operate together rather than treating authorization as an
+after-processing step.
+
+Research gap to investigate:
+Many publications evaluate RAG mainly for answer quality or retrieval quality.
+Many access-control systems separately study user authorization. This project
+investigates their integration: access restrictions are applied before and
+inside retrieval, while document ingestion, retrieved context, generation,
+citations, auditing, and document lifecycle are handled in one pipeline.
+
+Do not claim that no previous system combines RAG and access control until a
+systematic literature search confirms it. Write "this work investigates" or
+"this work presents" instead of "this is the first".
+
+
+3. PROPOSED CONTRIBUTIONS
+-------------------------
+
+Present these as contributions of the implemented prototype, not as globally
+novel inventions unless the literature review proves novelty.
+
+1. A document-ingestion pipeline for native-text PDF files that validates the
+   upload, extracts text, scans content, chunks the document, generates dense
+   embeddings, and stores chunks with document metadata and access roles.
+
+2. Role-aware retrieval in which the server derives roles from an authenticated
+   user and applies authorization constraints before inaccessible chunks can
+   become LLM context.
+
+3. Hybrid retrieval that combines dense-vector similarity, lexical matching,
+   title relevance, relevance thresholds, and an optional cross-encoder
+   reranker to reduce unrelated retrieval.
+
+4. Grounded answer generation through Groq using the
+   openai/gpt-oss-120b model, with citations linked to retrieved source chunks.
+
+5. Layered controls around the RAG path, including authentication, rate
+   limiting, prompt-risk checks, retrieved-context checks, response checks,
+   audit records, and document activation/deletion controls.
+
+6. An administrative interface for uploading documents, assigning access
+   roles and classifications, inspecting document state, deactivating and
+   reactivating documents, and permanently deleting documents and their vector
+   chunks.
+
+
+4. RESEARCH OBJECTIVES
+----------------------
+
+Primary objective:
+To design and evaluate a secure enterprise RAG pipeline that preserves useful
+retrieval while enforcing document access according to authenticated user
+roles.
+
+Specific objectives:
+1. Build a reliable native-text PDF ingestion and vector-indexing workflow.
+2. Enforce server-side document permissions during retrieval.
+3. Improve relevance using hybrid ranking, reranking, and rejection thresholds.
+4. Generate source-grounded answers with verifiable citations.
+5. assess authorization correctness, retrieval quality, answer grounding,
+   latency, and behavior on unrelated or adversarial queries.
+6. Provide administrative lifecycle operations and auditable system behavior.
+
+
+5. RESEARCH QUESTIONS AND OPTIONAL HYPOTHESES
+---------------------------------------------
+
+RQ1: How accurately does the system retrieve relevant chunks for authorized
+users?
+
+RQ2: Does the retrieval pipeline prevent users from receiving chunks belonging
+to roles they do not possess?
+
+RQ3: Does hybrid retrieval with reranking improve Precision@K, Recall@K, and
+MRR compared with dense-vector-only retrieval?
+
+RQ4: How reliably does the system return an empty result or an insufficient-
+evidence response for unrelated questions?
+
+RQ5: How accurately do answer citations support the claims made by the LLM?
+
+RQ6: What latency overhead is introduced by authorization filtering, hybrid
+ranking, security checks, reranking, and generation?
+
+Optional hypotheses, to be tested rather than assumed:
+H1: Hybrid retrieval plus reranking improves ranking quality over vector-only
+retrieval on the same labelled test set.
+H2: Database-backed role filtering produces zero unauthorized chunk disclosures
+in the defined authorization test suite.
+H3: Minimum-score and relative-score filtering improve empty-result accuracy
+for unrelated queries, with a measurable recall trade-off.
+
+
+6. SCOPE AND BOUNDARIES OF THE CURRENT SYSTEM
+---------------------------------------------
+
+Included in the current implementation:
+- One organization; tenant ID is intentionally not used.
+- Native-text PDF upload and extraction.
+- Document-level allowed-role assignment by an administrator.
+- JWT/session authentication integrated with SentinelAI database users.
+- Server-side role resolution and role-aware chunk retrieval.
+- Dense embeddings using BAAI/bge-small-en-v1.5 with 384 dimensions.
+- PostgreSQL with the pgvector extension.
+- Hybrid vector, lexical, and document-title signals.
+- Optional cross-encoder reranking.
+- Relevance thresholds and unrelated-query rejection.
+- Groq-hosted openai/gpt-oss-120b answer generation.
+- Citations to retrieved document chunks.
+- Input, retrieved-context, and output security checks.
+- Redis-backed supporting services such as rate limiting.
+- Audit information and administrator document lifecycle operations.
+- React/Vite frontend and FastAPI backend.
+
+Not currently implemented; place these only in Limitations or Future Work:
+- OCR for scanned PDFs.
+- Image understanding or multimodal RAG.
+- Multi-tenant isolation.
+- Attribute-based access control (ABAC).
+- A learned or agentic query router that automatically chooses general LLM
+  chat versus RAG.
+- A formal guarantee against every prompt-injection attack.
+- Automatic proof that every generated sentence is factually correct.
+
+
+7. ABSTRACT TEMPLATE
+--------------------
+
+Enterprise retrieval-augmented generation systems can improve access to
+organizational knowledge, but conventional semantic retrieval may return
+content that is relevant to a query yet unauthorized for the requesting user.
+This paper presents a secure role-aware RAG architecture that integrates
+authenticated role resolution, document-level access control, native-text PDF
+ingestion, hybrid retrieval, optional cross-encoder reranking, grounded answer
+generation, and source citation. Documents are divided into overlapping chunks,
+encoded using BAAI/bge-small-en-v1.5, and stored in PostgreSQL using pgvector.
+During a query, access constraints are applied before retrieved content is sent
+to the language model. The prototype also includes prompt-risk checks,
+retrieved-context scanning, response checks, rate limiting, auditing, and
+administrator-controlled document lifecycle operations. The system is evaluated
+on [NUMBER OF DOCUMENTS] documents and [NUMBER OF TEST QUERIES] labelled queries
+using Precision@K, Recall@K, mean reciprocal rank, empty-result accuracy,
+authorization accuracy, citation support, and end-to-end latency. Results show
+[INSERT ONLY MEASURED FINDINGS]. The study demonstrates [INSERT A CONCLUSION
+SUPPORTED BY THE RESULTS] and identifies limitations concerning native-text-only
+input, role granularity, security-detector coverage, and dataset scale.
+
+Suggested keywords:
+Retrieval-Augmented Generation; Role-Based Access Control; Large Language
+Models; Enterprise Search; Vector Database; Prompt Injection; Information
+Retrieval; Grounded Generation; Document Security
+
+
+8. RECOMMENDED PAPER STRUCTURE
+------------------------------
+
+8.1 Introduction
+~~~~~~~~~~~~~~~~
+Include:
+- The growth of LLM-based enterprise assistants.
+- Why an LLM alone cannot reliably access private, changing organizational
+  documents.
+- A short definition of RAG and its purpose. Cite [R1].
+- The confidentiality problem: semantic relevance does not imply permission.
+- Why role-based access control is relevant. Cite [R2].
+- Prompt injection and sensitive-information risks. Cite [R3], [R4], and [R10].
+- The specific problem addressed by this project.
+- The research questions and contributions.
+- A short outline of the remaining sections.
+
+Possible opening paragraph:
+Large language models provide fluent natural-language interaction but do not
+automatically possess current or private organizational knowledge. Retrieval-
+augmented generation addresses this limitation by supplying external evidence
+to a generator [R1]. In an enterprise deployment, however, retrieving relevant
+text is insufficient: the system must also determine whether the authenticated
+user is permitted to access that text. This creates a combined retrieval,
+authorization, and generation problem.
+
+8.2 Related Work / Literature Review
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Organize this section by concepts, not as a list of paper summaries.
+
+A. Retrieval-Augmented Generation
+- Original RAG formulation and retrieval-conditioned generation [R1].
+- Dense retrieval, chunking, vector indexes, and grounded generation.
+- Limitations such as irrelevant retrieval and context-position effects [R11].
+
+B. RAG evaluation
+- Retrieval metrics and generation/faithfulness evaluation [R6], [R7].
+- Explain why a single "accuracy" number is inadequate.
+
+C. Embedding and ranking models
+- Explain the selected BGE embedding family and cite [R8].
+- Research recent dense retrieval and reranking studies before comparing model
+  quality. Do not state that BGE is "the best" without a relevant benchmark.
+
+D. Access control
+- Introduce RBAC concepts and role-permission assignment [R2].
+- Compare document-level RBAC with ABAC and multi-tenant isolation.
+- State that this project uses RBAC because its application roles map clearly
+  to organizational document permissions.
+
+E. LLM security
+- Discuss direct and indirect prompt injection [R4], [R10].
+- Discuss sensitive-information disclosure and insecure output handling [R4].
+- Connect the threat categories to the controls evaluated in this project.
+
+F. Identified gap
+- Create a comparison table of related systems.
+- State exactly which combination is missing or insufficiently evaluated.
+- Do not claim a gap based on only one or two papers.
+
+Related-work comparison table template:
+
+| Work | Retrieval method | Access control | Injection defense |
+| Citation validation | Evaluation metrics | Main limitation |
+|------|------------------|----------------|-------------------|
+| [Paper] | [Method] | [None/RBAC/ABAC] | [Method] |
+| [Yes/No] | [Metrics] | [Limitation] |
+
+8.3 Threat Model and Security Requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Define these explicitly before describing defenses.
+
+Assets:
+- Original organizational documents.
+- Extracted chunks and embeddings.
+- User identity and roles.
+- Retrieved context.
+- Generated answers and citations.
+- Audit records and credentials.
+
+Actors:
+- Authorized employee.
+- HR or manager with additional permissions.
+- Administrator.
+- Authenticated but unauthorized user.
+- Malicious user attempting prompt injection or data extraction.
+- Malicious or compromised document containing hidden instructions.
+
+Trust boundaries:
+- Browser to backend API.
+- Backend to PostgreSQL/pgvector.
+- Backend to Redis.
+- Backend to external Groq model service.
+- Administrator upload boundary.
+
+Security requirements:
+SR1. The server, not the client, must determine effective roles.
+SR2. Inaccessible documents must not enter retrieved LLM context.
+SR3. Deactivated or deleted documents must not be retrievable.
+SR4. Suspicious input and retrieved content must be detected or handled by
+     explicit policy.
+SR5. Responses must be checked for unsafe or sensitive output.
+SR6. Security-relevant activity must be auditable.
+
+Clearly state non-goals. For example, the prototype does not claim protection
+against a fully compromised backend, database administrator, operating system,
+or external model provider.
+
+8.4 Proposed System Architecture
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Describe the implemented components:
+
+Frontend:
+- React/Vite user interface.
+- Conversation experience and citations.
+- Administrator upload and document-management interface.
+
+Backend:
+- FastAPI endpoints and application services.
+- Authentication, authorization, input checks, retrieval, generation, output
+  checks, and audit handling.
+
+Storage:
+- PostgreSQL for users, roles, document metadata, chunks, and related records.
+- pgvector for vector similarity operations.
+- Redis for rate-limiting/supporting runtime state.
+- Local or configured storage for uploaded PDF files.
+
+External inference:
+- BGE embedding model for dense vectors.
+- Optional cross-encoder for reranking.
+- Groq API with openai/gpt-oss-120b for final generation.
+
+Reference the existing project description:
+docs/architecture/system-architecture.md
+
+8.5 Methodology: Document Ingestion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Describe the actual sequence:
+
+1. An authenticated administrator uploads a PDF and supplies a display name,
+   allowed roles, and a classification.
+2. The API validates the file type, PDF structure, request fields, roles, and
+   configured size/page constraints.
+3. Native text is extracted with PyMuPDF. A file without usable embedded text
+   is rejected because OCR is outside the current scope.
+4. Extracted text is inspected by configured injection/sensitive-content
+   detectors and policy rules.
+5. Text is divided into overlapping chunks. The current configuration uses a
+   target of 450 words and an overlap of 75 words.
+6. Chunk embeddings are generated by BAAI/bge-small-en-v1.5. Each vector has
+   384 dimensions.
+7. The chunks, embeddings, document identifiers, page information, roles,
+   classification, and status are stored in PostgreSQL/pgvector.
+8. The document becomes retrievable only if ingestion succeeds and its status
+   is active.
+
+Explain the chunk-size choice as an engineering configuration, not a universal
+optimum. Experimentally compare at least two or three chunk configurations if
+the paper claims that the chosen value is optimal.
+
+8.6 Methodology: Authentication and Authorization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. A user authenticates through SentinelAI.
+2. The backend validates the token/session and resolves the current user.
+3. Effective roles are obtained from server-controlled database records.
+4. Any roles supplied in a query body are ignored or rejected; the browser is
+   not an authority for permissions.
+5. Retrieval considers only active documents whose allowed-role set intersects
+   the authenticated user's roles.
+6. Requested document IDs are also checked for existence and accessibility.
+
+Explain JWT as a token format and cite [R5], but clarify that JWT alone does not
+provide authorization. Authorization depends on validation, server policy, and
+current database role state.
+
+8.7 Methodology: Authorized Retrieval and Ranking
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The current system obtains an authorized candidate set and combines several
+relevance signals.
+
+Signals:
+- Vector similarity between the query and chunk embedding.
+- Lexical overlap between the query and chunk text.
+- Title relevance between the query and document name/title.
+- Optional cross-encoder relevance score.
+
+Current final scoring configuration:
+
+With reranking:
+FinalScore = 0.45(RerankerScore) + 0.35(VectorScore)
+             + 0.12(LexicalScore) + 0.08(TitleScore)
+
+Without reranking:
+FinalScore = 0.65(VectorScore) + 0.22(LexicalScore)
+             + 0.13(TitleScore)
+
+Current retrieval configuration:
+- Candidate count: 20
+- Default returned top_k: 5
+- Minimum initial retrieval score: 0.20
+- Minimum final score: 0.35
+- Relative score margin: 0.12
+
+Describe these as prototype hyperparameters. In a research paper, report how
+they were selected (development set, grid search, or engineering judgement) and
+avoid tuning them on the final test set.
+
+8.8 Methodology: Generation and Citation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1. The system constructs an LLM prompt using only authorized, accepted chunks.
+2. Source labels and metadata are included with the evidence.
+3. Groq openai/gpt-oss-120b generates an answer constrained by the supplied
+   evidence and instructions.
+4. Returned citation identifiers are validated against the chunks actually
+   provided to the generator.
+5. If evidence is absent or insufficient, the desired behavior is to decline
+   to make a document-grounded claim rather than invent an answer.
+6. The response passes through output security checks before delivery.
+
+Distinguish these terms in the paper:
+- Citation validity: the cited source identifier exists in retrieved context.
+- Citation correctness/support: the cited passage actually supports the claim.
+- Citation completeness: important factual claims have citations.
+Identifier validation alone does not prove semantic support.
+
+8.9 Methodology: Administrative Lifecycle
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Active: document can participate in authorized retrieval.
+- Inactive: metadata remains, but the document is excluded from retrieval.
+- Reactivated: the document is again eligible under its existing permissions.
+- Permanently deleted: document records and vector chunks are removed according
+  to the implemented deletion transaction and no longer appear in the admin UI.
+
+Verify deletion using both an API/database check and a retrieval attempt. Avoid
+claiming secure physical erasure from disk unless storage-level erasure was
+specifically implemented and tested.
+
+
+9. EXPERIMENTAL DESIGN
+----------------------
+
+9.1 Dataset construction
+~~~~~~~~~~~~~~~~~~~~~~~~
+Create a documented, legally usable evaluation collection. A reasonable student
+project target is 6-15 documents and 100-200 labelled queries, but the final
+number must reflect available time and must be reported honestly.
+
+Include several document domains, for example:
+- Employee policies.
+- HR notices.
+- Management procedures.
+- Technical/OOP learning material.
+- Cybersecurity syllabus or examination notices.
+- Finance/payroll material if safe synthetic data is used.
+
+Never use real private resumes, phone numbers, salaries, or employee records in
+a published dataset. Use synthetic or properly anonymized content and document
+the procedure.
+
+For every test query, store:
+- Query ID.
+- Query text.
+- Test user and effective role(s).
+- Relevant document ID(s).
+- Relevant chunk ID(s), if chunk-level labels are available.
+- Expected access decision: allow, deny, or no relevant evidence.
+- Expected answer facts.
+- Expected supporting citations.
+- Query category.
+
+Recommended query categories:
+1. Direct fact lookup.
+2. Paraphrased fact lookup.
+3. Multi-chunk question.
+4. Ambiguous question.
+5. Unrelated/out-of-domain question.
+6. Authorized question.
+7. Unauthorized cross-role question.
+8. Deactivated/deleted-document question.
+9. Direct prompt-injection attempt.
+10. Indirect injection text contained inside a test document.
+11. Sensitive-data extraction attempt.
+12. Citation-support test.
+
+Split the data before tuning:
+- Development/validation set: used to select thresholds and weights.
+- Final test set: used once for the reported results.
+
+For stronger annotation quality, use two annotators for a subset or the entire
+test set, resolve disagreement, and report an agreement statistic such as
+Cohen's kappa where appropriate. Document the labelling instructions.
+
+9.2 Baselines and ablations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Compare identical queries and permissions under controlled configurations:
+
+B1. Dense-vector retrieval only.
+B2. Vector + lexical + title hybrid retrieval.
+B3. Hybrid retrieval + cross-encoder reranking.
+B4. Full retrieval without minimum/relative score rejection.
+B5. Full retrieval with score rejection.
+
+Security experiments:
+S1. Authorized role and relevant document.
+S2. Unauthorized role and relevant document.
+S3. User requesting an inaccessible document ID directly.
+S4. Document changed from active to inactive.
+S5. Document permanently deleted.
+S6. Forged roles submitted by the client.
+S7. Direct and indirect prompt-injection cases.
+
+Do not disable authorization in a production-like environment. If an ablation
+needs authorization removed, use synthetic documents and an isolated test
+database.
+
+9.3 Metrics and formulas
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Precision@K:
+Precision@K = Number of relevant items in top K / K
+
+State whether an "item" is a document or a chunk. Do not mix both definitions
+in one result table.
+
+Recall@K:
+Recall@K = Number of relevant items in top K /
+           Total number of labelled relevant items
+
+Mean Reciprocal Rank (MRR):
+MRR = (1/N) * SUM(1 / rank of first relevant result)
+Use 0 for a query with no relevant result returned.
+
+Empty-result accuracy:
+Number of unrelated/no-evidence queries correctly returning no accepted context
+divided by the total number of unrelated/no-evidence queries.
+
+Authorization accuracy:
+Number of authorization test cases with the correct allow/deny outcome divided
+by the total authorization test cases.
+
+Also report unauthorized disclosure count separately. A high percentage can
+hide a serious single disclosure.
+
+Citation support precision:
+Number of evaluated citations whose passages support the associated claims
+divided by total evaluated citations.
+
+Citation completeness:
+Number of externally verifiable answer claims that contain a supporting citation
+divided by total externally verifiable answer claims.
+
+Answer correctness:
+Use a predefined rubric, human evaluation, or an independently validated judge.
+If an LLM judge is used, report its model, prompt, temperature, failure handling,
+and human-validation sample. Do not label an unvalidated LLM score as ground
+truth.
+
+Security metrics:
+- Unauthorized disclosure count.
+- Attack detection rate = detected labelled attacks / total labelled attacks.
+- False-positive rate = benign cases incorrectly blocked / total benign cases.
+- False-negative rate = malicious cases missed / total malicious cases.
+
+Performance metrics:
+- Ingestion time per document/page/chunk.
+- Retrieval latency: median (p50) and 95th percentile (p95).
+- Generation latency: p50 and p95.
+- End-to-end response latency: p50 and p95.
+- Index/storage size if relevant.
+
+Always report sample count with every percentage.
+
+9.4 Experimental environment table
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Record this before running experiments:
+
+| Item | Value |
+|------|-------|
+| Date of experiment | [DATE] |
+| Operating system | [OS AND VERSION] |
+| CPU | [CPU] |
+| RAM | [RAM] |
+| GPU | [GPU OR NONE] |
+| Python version | [VERSION] |
+| FastAPI version | [VERSION] |
+| PostgreSQL/pgvector version | [VERSIONS] |
+| Embedding model | BAAI/bge-small-en-v1.5 |
+| Embedding dimensions | 384 |
+| Reranker | [MODEL OR DISABLED] |
+| Generator | openai/gpt-oss-120b through Groq |
+| Chunk size/overlap | 450/75 words |
+| Candidate K / output K | 20 / [K] |
+| Retrieval thresholds | 0.20 initial; 0.35 final; 0.12 margin |
+| Dataset size | [DOCUMENTS, CHUNKS, QUERIES] |
+
+Record dependency versions from the exact environment used, rather than copying
+current website versions into the paper.
+
+
+10. RESULTS TABLE TEMPLATES
+---------------------------
+
+Table A. Retrieval effectiveness
+
+| Configuration | P@1 | P@3 | P@5 | R@5 | MRR | Empty-result accuracy |
+|---------------|-----|-----|-----|-----|-----|-----------------------|
+| Vector only | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Hybrid | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Hybrid + reranker | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Full system + rejection | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+Table B. Authorization testing
+
+| Scenario | Test cases | Correct decisions | Unauthorized disclosures |
+|----------|------------|-------------------|--------------------------|
+| Employee documents | [ ] | [ ] | [ ] |
+| HR documents | [ ] | [ ] | [ ] |
+| Manager documents | [ ] | [ ] | [ ] |
+| Admin documents | [ ] | [ ] | [ ] |
+| Forged client role | [ ] | [ ] | [ ] |
+| Inactive/deleted document | [ ] | [ ] | [ ] |
+
+Table C. Answer and citation quality
+
+| Configuration | Answer correctness | Citation support | Citation completeness |
+|---------------|--------------------|------------------|-----------------------|
+| Full system | [ ] | [ ] | [ ] |
+
+Table D. Security-detector behavior
+
+| Test type | Cases | Detection rate | False positives | False negatives |
+|-----------|-------|----------------|-----------------|-----------------|
+| Direct injection | [ ] | [ ] | [ ] | [ ] |
+| Indirect injection | [ ] | [ ] | [ ] | [ ] |
+| Sensitive extraction | [ ] | [ ] | [ ] | [ ] |
+
+Table E. Latency
+
+| Stage | p50 ms | p95 ms | Mean ms | Number of runs |
+|-------|--------|--------|---------|----------------|
+| Authorization | [ ] | [ ] | [ ] | [ ] |
+| Retrieval | [ ] | [ ] | [ ] | [ ] |
+| Reranking | [ ] | [ ] | [ ] | [ ] |
+| LLM generation | [ ] | [ ] | [ ] | [ ] |
+| End-to-end | [ ] | [ ] | [ ] | [ ] |
+
+Statistical reporting:
+- Include N for every experiment.
+- Repeat latency tests after warm-up.
+- Report variance, standard deviation, confidence intervals, or bootstrap
+  intervals where feasible.
+- If comparing configurations query-by-query, use an appropriate paired test or
+  confidence interval and explain the choice.
+- Discuss effect size, not only whether a difference is statistically
+  significant.
+
+
+11. HOW TO DISCUSS THE EXISTING SMOKE TEST
+------------------------------------------
+
+The file docs/evaluation/step-9-evaluation-results.json records perfect values
+for a very small temporary two-role smoke test. It can be used as preliminary
+engineering verification that the evaluation path runs and basic role cases
+behave as expected.
+
+It must not be presented as "the model achieved 100% accuracy" in the abstract,
+conclusion, or main research results. The sample is too small and was not built
+as an independent representative benchmark. Run the experiment described above
+before reporting research findings.
+
+Safe wording:
+"A preliminary smoke test verified the evaluation pipeline and basic role-
+filtering behavior. Because this test contained only a small synthetic sample,
+its values are not treated as evidence of general effectiveness. The reported
+research results use a separately labelled test collection of [N] queries."
+
+
+12. FIGURES TO INCLUDE AND WHERE TO PLACE THEM
+----------------------------------------------
+
+Figure 1. Overall secure RAG architecture
+Placement: end of System Architecture overview.
+Show: user/frontend -> authentication/security pipeline -> authorized retriever
+-> PostgreSQL/pgvector -> generator -> response guard -> answer/citations, with
+Redis and audit paths.
+
+Figure 2. Document ingestion flow
+Placement: Document Ingestion methodology.
+Show: admin upload -> validation -> text extraction -> content scan -> chunking
+-> embedding -> metadata/ACL + vector storage -> active status.
+
+Figure 3. Authorized query flow
+Placement: Authentication and Retrieval methodology.
+Show: authenticated user -> database roles -> policy checks -> role-filtered
+candidate search -> ranking/reranking -> threshold -> LLM context.
+
+Figure 4. Simplified data model
+Placement: System Design or Implementation.
+Show: User, Role, Document, DocumentAllowedRole, Chunk/Embedding, Conversation,
+Message/Citation, and Audit entities. Generate this from the actual models; do
+not invent relationships.
+
+Figure 5. Administrator document-management interface
+Placement: Implementation section.
+Use a screenshot containing synthetic document names and no tokens, credentials,
+personal information, filesystem paths, or API keys.
+
+Figure 6. Retrieval comparison chart
+Placement: Results.
+Show measured P@K, Recall@K, or MRR across ablation configurations with sample
+size and confidence/error information where possible.
+
+Figure captions must explain the figure without requiring the reader to search
+the surrounding text. Mention every figure in the paper before or near where it
+appears.
+
+
+13. DISCUSSION SECTION GUIDE
+----------------------------
+
+Discuss, rather than repeat, the result tables:
+- Whether hybrid retrieval reduced irrelevant resume-like or cross-topic chunks.
+- Whether reranking improved the first relevant result and at what latency cost.
+- Whether thresholds improved unrelated-query rejection and whether recall fell.
+- Whether role filtering succeeded across all roles and lifecycle states.
+- Which injection patterns were detected and which were missed.
+- Whether citations were valid identifiers and semantically supportive.
+- The influence of dataset size and document similarity.
+- What the results mean for enterprise use and what they do not prove.
+
+Use cautious language:
+- Prefer "the results indicate" over "this proves".
+- Prefer "mitigates" over "prevents all attacks".
+- Prefer "no disclosure was observed in N test cases" over "the system can never
+  leak data".
+- Prefer "improved P@K on this dataset" over "is more accurate in every case".
+
+
+14. LIMITATIONS AND THREATS TO VALIDITY
+---------------------------------------
+
+System limitations:
+- Only PDFs with usable embedded text are supported; scanned PDFs require OCR
+  and are intentionally rejected.
+- Roles are document-level; sections within one document do not have independent
+  permissions unless they are uploaded separately or the schema is extended.
+- RBAC cannot express all context-dependent rules such as location, device,
+  working hours, or case assignment.
+- Detector rules/models can have false positives and false negatives.
+- External generation introduces provider availability, privacy, and latency
+  considerations.
+- Dense retrieval and reranking remain probabilistic and domain-dependent.
+- Citation ID validation does not guarantee claim support.
+- One-company design does not demonstrate tenant isolation.
+
+Internal validity threats:
+- Hyperparameters may be overfitted to the evaluation documents.
+- Human relevance labels can be subjective.
+- Cached embeddings or warmed models can bias latency results.
+- LLM output nondeterminism can change answer scores.
+
+External validity threats:
+- A small college/enterprise-style dataset may not generalize to legal, medical,
+  multilingual, or very large collections.
+- Synthetic security attacks may not represent adaptive real attackers.
+- Results for one embedding model and one generator may not transfer to others.
+
+Construct validity threats:
+- Precision/Recall measure retrieval, not complete answer correctness.
+- "Authorization accuracy" must be based on explicit policy cases.
+- An automatic LLM judge may prefer certain writing styles or model families.
+
+Reproducibility threats:
+- External hosted model versions may change.
+- Dependency and model versions must be pinned and reported.
+- Random seeds and generation settings must be recorded where supported.
+
+
+15. ETHICS, PRIVACY, AND RESPONSIBLE REPORTING
+----------------------------------------------
+
+- Use synthetic or authorized documents in experiments.
+- Remove real names, IDs, email addresses, phone numbers, marks, salaries, and
+  credentials from screenshots and datasets.
+- Never include .env contents, JWTs, database passwords, or API keys in the
+  paper or repository.
+- Document what data is sent to an external model provider.
+- State retention/deletion behavior accurately.
+- Do not claim legal compliance such as GDPR, HIPAA, or ISO certification unless
+  the complete legal and technical requirements were assessed by qualified
+  reviewers.
+- Treat NIST and OWASP materials as risk-management guidance, not proof that the
+  application is secure or certified [R3], [R4].
+
+
+16. FUTURE WORK
+---------------
+
+Suitable future-work items:
+- A central query router that decides whether to use general assistant knowledge,
+  secure RAG, or a safe refusal path.
+- OCR for scanned documents with confidence-aware extraction.
+- Image and chart understanding for multimodal documents.
+- Attribute-based or policy-based access control for finer rules.
+- Multi-tenant isolation with tenant-aware storage and authorization.
+- Section/chunk-level permissions.
+- Multilingual embeddings and evaluation.
+- Stronger indirect prompt-injection detection and document quarantine.
+- Automated citation entailment plus human verification.
+- Larger, independently annotated benchmarks and red-team testing.
+- Encryption/key-management and external security review.
+
+Do not describe future-work features as current contributions.
+
+
+17. CONCLUSION TEMPLATE
+-----------------------
+
+This paper presented a secure role-aware RAG prototype for organizational
+documents. The system combines native-text PDF ingestion, dense embeddings,
+hybrid retrieval, optional reranking, database-backed role constraints, grounded
+generation, citations, layered security checks, and document lifecycle
+management. Evaluation on [N DOCUMENTS] and [N QUERIES] found that [INSERT
+MEASURED RETRIEVAL RESULT], while authorization tests produced [INSERT MEASURED
+RESULT AND DISCLOSURE COUNT]. [INSERT MEASURED CITATION AND LATENCY FINDINGS].
+These findings suggest [LIMITED, EVIDENCE-BASED INTERPRETATION]. The prototype
+does not yet support scanned or multimodal documents, fine-grained ABAC, or
+multi-tenant operation. Future work will expand the benchmark and examine
+adaptive routing, richer permissions, multimodal ingestion, and stronger
+security evaluation.
+
+
+18. EXACTLY WHERE REFERENCES SHOULD BE ATTACHED
+-----------------------------------------------
+
+Use a citation immediately after the sentence or paragraph containing the
+external idea. Example placement:
+
+Claim or topic                                      Suggested reference
+--------------------------------------------------------------------------
+Definition/original formulation of RAG              [R1]
+Parametric plus retrieved non-parametric memory      [R1]
+Definition and core RBAC model                       [R2]
+Generative-AI risk management framing                [R3]
+Prompt injection and sensitive disclosure risks     [R4]
+JWT structure/standard terminology                   [R5]
+RAG faithfulness/relevance evaluation                [R6]
+Survey/taxonomy of RAG evaluation                    [R7]
+BGE embedding model background                       [R8]
+pgvector behavior or operators                       [R9]
+Indirect prompt injection as a threat                [R10]
+Long-context position limitations                    [R11]
+LLM application security testing guidance            [R12]
+
+No external citation is normally required for a factual description of code
+that this team implemented. Introduce it as "the proposed system" and point to a
+figure, algorithm, or table. However, cite the external algorithm, model,
+standard, library behavior, or metric definition that the implementation uses.
+
+Do cite:
+- Definitions and algorithms.
+- Claims about other researchers' results.
+- Standards and threat taxonomies.
+- Model architectures and public benchmarks.
+- Facts that a reader cannot verify from this project's own experiment.
+
+Do not use a citation to hide an unsupported claim. A cited paper must actually
+support the precise sentence.
+
+
+19. PRIMARY REFERENCES TO START WITH
+------------------------------------
+
+[R1] P. Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive
+     NLP Tasks," Advances in Neural Information Processing Systems, 2020.
+     https://arxiv.org/abs/2005.11401
+
+[R2] R. S. Sandhu, E. J. Coyne, H. L. Feinstein, and C. E. Youman,
+     "Role-Based Access Control Models," IEEE Computer, vol. 29, no. 2,
+     pp. 38-47, 1996.
+     https://csrc.nist.gov/csrc/media/projects/role-based-access-control/documents/sandhu96.pdf
+
+[R3] National Institute of Standards and Technology, "Artificial Intelligence
+     Risk Management Framework: Generative Artificial Intelligence Profile,"
+     NIST AI 600-1, 2024. DOI: 10.6028/NIST.AI.600-1.
+     https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf
+
+[R4] OWASP Foundation, "OWASP Top 10 for Large Language Model Applications
+     2025," especially Prompt Injection and Sensitive Information Disclosure.
+     Verify the latest edition on the submission date.
+     https://genai.owasp.org/llm-top-10/
+
+[R5] M. Jones, J. Bradley, and N. Sakimura, "JSON Web Token (JWT),"
+     RFC 7519, May 2015.
+     https://www.rfc-editor.org/rfc/rfc7519
+
+[R6] S. Es et al., "RAGAS: Automated Evaluation of Retrieval Augmented
+     Generation," 2023.
+     https://arxiv.org/abs/2309.15217
+
+[R7] Y. Yu et al., "Evaluation of Retrieval-Augmented Generation: A Survey,"
+     2024.
+     https://arxiv.org/abs/2405.07437
+
+[R8] S. Xiao et al., "C-Pack: Packaged Resources to Advance General Chinese
+     Embedding," 2023. This paper introduces the BGE embedding family; verify
+     the exact model card and licence for the selected checkpoint as well.
+     https://arxiv.org/abs/2309.07597
+
+[R9] pgvector, "Open-source vector similarity search for Postgres,"
+     official documentation. Record the version used in the experiment.
+     https://pgvector.app/docs/
+
+[R10] K. Greshake et al., "Not What You've Signed Up For: Compromising Real-
+      World LLM-Integrated Applications with Indirect Prompt Injection," 2023.
+      https://arxiv.org/abs/2302.12173
+
+[R11] N. F. Liu et al., "Lost in the Middle: How Language Models Use Long
+      Contexts," 2023.
+      https://arxiv.org/abs/2307.03172
+
+[R12] OWASP Foundation, "AI/LLM Application Security Testing," DevSecOps
+      Guideline.
+      https://owasp.github.io/DevSecOpsGuideline/2-Process/2-4-Test/2-4-6-AI-LLM-Application-Security-Testing/
+
+Before submission, convert these entries to the exact citation style required by
+the target journal/conference (IEEE, APA, ACM, etc.), verify author lists, page
+numbers, publication venue, DOI, year, and access date. Prefer the final peer-
+reviewed version over an arXiv version when one exists.
+
+
+20. TOPICS THAT REQUIRE CAREFUL NEW RESEARCH
+--------------------------------------------
+
+Do not rely only on the references above. Carefully research:
+
+1. Secure and access-controlled RAG papers from 2023-2026.
+   Search IEEE Xplore, ACM Digital Library, Springer, ScienceDirect, USENIX,
+   arXiv, and Google Scholar. Record search strings, dates, screening rules, and
+   why each paper is included or excluded.
+
+2. Current prompt-injection research.
+   Separate direct user injection, indirect document injection, tool misuse,
+   data exfiltration, and denial-of-service. Evaluate the attacks relevant to
+   this system rather than using one generic test string.
+
+3. RBAC versus ABAC and policy-based access control.
+   Explain why document-level RBAC was selected and where it is insufficient.
+
+4. RAG evaluation methodology.
+   Verify definitions of retrieval, generation, faithfulness, citation, and
+   abstention metrics. Decide exactly what the unit of relevance is.
+
+5. Embedding and reranker selection.
+   Check the model cards, licences, context lengths, intended languages, and
+   current benchmark limitations. Do not copy leaderboard values as if they
+   were results from this project.
+
+6. Privacy and external inference.
+   Research what content is transmitted to Groq under the chosen API/service
+   terms at the time of deployment. Do not make retention or compliance claims
+   from memory.
+
+7. Database/vector-search behavior.
+   Confirm exact pgvector indexing and distance configuration in this codebase.
+   Do not state HNSW, IVFFlat, cosine, inner product, or exact search unless the
+   schema/query and experiment verify it.
+
+8. Legal or regulatory claims.
+   Add these only if the project has a defined jurisdiction and qualified review.
+   Security features alone do not establish legal compliance.
+
+9. Comparable enterprise systems.
+   Use product documentation only for feature comparisons, not as independent
+   scientific proof. Clearly separate academic related work from commercial
+   products.
+
+10. Latest versions at submission time.
+    OWASP taxonomies, hosted model behavior, libraries, and API terms can change.
+    Recheck them immediately before final submission.
+
+
+21. PROJECT EVIDENCE MAP
+------------------------
+
+Use the repository as evidence for implementation descriptions:
+
+- Overall architecture:
+  docs/architecture/system-architecture.md
+
+- Evaluation example dataset:
+  docs/evaluation/rag-evaluation-dataset.example.json
+
+- Preliminary/smoke-test output:
+  docs/evaluation/step-9-evaluation-results.json
+
+- Backend source:
+  inspect the organized backend application directories for authentication,
+  document APIs, ingestion, retrieval, ranking, generation, security, database
+  models, and configuration before quoting filenames in the paper.
+
+- Frontend source:
+  inspect administrator document pages, conversation pages, auth/session logic,
+  and API clients before preparing screenshots or UI flow descriptions.
+
+- Deployment configuration:
+  inspect Docker Compose, Dockerfiles, .env.example files, migrations, and
+  dependency files. Never use the private .env as a paper source.
+
+Because code can change, create a Git tag or commit identifier for the exact
+paper version and include it in the reproducibility material.
+
+
+22. REPRODUCIBILITY CHECKLIST
+-----------------------------
+
+[ ] Remove secrets and personal data from the repository.
+[ ] Record the exact Git commit used for experiments.
+[ ] Pin/report Python, JavaScript, database, and model versions.
+[ ] Document hardware and operating system.
+[ ] Preserve the labelled test dataset or describe how it can be recreated.
+[ ] Preserve metric scripts and raw, per-query outputs.
+[ ] Record retrieval weights, thresholds, K values, chunk size, and overlap.
+[ ] Record random seeds and LLM generation settings where supported.
+[ ] State whether caches were warm or cold in latency testing.
+[ ] Separate development and test data.
+[ ] Include failed/empty cases rather than silently removing them.
+[ ] Document human annotation guidelines and disagreement handling.
+[ ] Make synthetic test documents safe to share.
+[ ] Report API/provider dependencies that prevent fully offline reproduction.
+
+
+23. WRITING AND CITATION CHECKLIST
+----------------------------------
+
+[ ] Every external factual claim has a suitable primary citation.
+[ ] Every cited source actually supports the nearby sentence.
+[ ] Related-work claims were checked in the full paper, not only the abstract.
+[ ] Implementation descriptions match the current code.
+[ ] Proposed/future features are not described as implemented.
+[ ] No API key, JWT, password, real PII, or private document text appears.
+[ ] No result is reported without N, method, and dataset description.
+[ ] The paper distinguishes retrieval relevance from answer correctness.
+[ ] The paper distinguishes valid citation IDs from supported claims.
+[ ] All tables and figures are mentioned in the text.
+[ ] Limitations and negative results are reported.
+[ ] Acronyms such as RAG, RBAC, JWT, LLM, and PII are defined on first use.
+[ ] The abstract contains real measured results before submission.
+[ ] The conclusion does not make broader claims than the experiments support.
+[ ] References match the required publication style.
+[ ] Text is original; copied language is quoted sparingly and cited.
+
+
+24. SUGGESTED WORK ORDER FOR WRITING THE PAPER
+----------------------------------------------
+
+1. Freeze and tag the implementation version.
+2. Finalize the threat model and research questions.
+3. Complete the structured literature search.
+4. Build and independently label the evaluation dataset.
+5. Implement/verify metric scripts and experiment logging.
+6. Run baselines, ablations, security tests, and latency tests.
+7. Analyze failures and verify citations manually.
+8. Prepare figures and tables from measured data.
+9. Write Methodology and System Design first because they are already known.
+10. Write Results without interpretation.
+11. Write Discussion, Limitations, and Threats to Validity.
+12. Write Introduction, Abstract, and Conclusion last so they match the evidence.
+13. Perform reference, privacy, plagiarism, and reproducibility checks.
+14. Ask the project guide and at least one person unfamiliar with the system to
+    review the paper for clarity and unsupported claims.
+
+
+FINAL REMINDER
+--------------
+The strongest claim this project can make is not that it has "100% RAG
+accuracy." Its research value is the design and measured evaluation of a
+combined retrieval-and-authorization pipeline. Report retrieval, authorization,
+citation, security, and latency results separately, with transparent test data
+and limitations.

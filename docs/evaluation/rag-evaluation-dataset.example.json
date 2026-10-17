@@ -1,0 +1,28 @@
+[
+  {
+    "case_id": "relevant-document-first",
+    "expected_document_ids": ["expected-document-id"],
+    "returned_document_ids": ["expected-document-id", "other-document-id"],
+    "retrieved_chunk_ids": ["expected-chunk-id"],
+    "cited_chunk_ids": ["expected-chunk-id"],
+    "expected_empty": false,
+    "expected_denied": false,
+    "status_code": 200
+  },
+  {
+    "case_id": "unrelated-question",
+    "expected_document_ids": [],
+    "returned_document_ids": [],
+    "expected_empty": true,
+    "expected_denied": false,
+    "status_code": 200
+  },
+  {
+    "case_id": "unauthorized-document-scope",
+    "expected_document_ids": [],
+    "returned_document_ids": [],
+    "expected_empty": false,
+    "expected_denied": true,
+    "status_code": 404
+  }
+]

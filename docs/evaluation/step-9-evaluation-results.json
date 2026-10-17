@@ -1,0 +1,25 @@
+{
+  "citation_contract": {
+    "hallucinated_source_rejected": true,
+    "valid_source_accepted": true
+  },
+  "dataset": "temporary-two-role-live-smoke-v1",
+  "metrics": {
+    "authorization_accuracy": 1.0,
+    "empty_result_accuracy": 1.0,
+    "mean_reciprocal_rank": 1.0,
+    "precision_at_k": 1.0,
+    "recall_at_k": 1.0
+  },
+  "notes": [
+    "This is an integration smoke test, not a statistically meaningful research benchmark.",
+    "A larger labelled question set is required before publishing final performance claims.",
+    "Citation semantic support still requires human-labelled answer evidence or an independent judge."
+  ],
+  "security_checks": {
+    "deactivated_document_excluded": true,
+    "employee_denied_hr_document": true,
+    "hr_denied_employee_document": true,
+    "unrelated_query_returned_empty": true
+  }
+}

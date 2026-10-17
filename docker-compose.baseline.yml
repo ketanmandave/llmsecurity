@@ -1,0 +1,96 @@
+# =============================================================
+# SentinelAI College — ISOLATED BASELINE
+# Project: sentinel-baseline
+# Ports are intentionally offset to avoid collision with RAG:
+#   PostgreSQL : 15433  (RAG uses 5433)
+#   Redis      : 16380  (RAG uses 6380)
+#   Backend    : 18000  (RAG uses 8000)
+#   Frontend   : 15174  (RAG uses N/A)
+# Volume: sentinel_baseline_postgres (separate from RAG volumes)
+# DO NOT change ports without updating backend/.env.baseline
+# =============================================================
+name: sentinel-baseline
+
+services:
+  sentinel-db:
+    image: pgvector/pgvector:pg16
+    container_name: sentinel-baseline-db
+    environment:
+      POSTGRES_DB: sentinelaidb_college
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sentinel_baseline_pass
+    ports:
+      - '15433:5432'
+    volumes:
+      - sentinel_baseline_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sentinelaidb_college"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  sentinel-redis:
+    image: redis:7-alpine
+    container_name: sentinel-baseline-redis
+    ports:
+      - '16380:6379'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  sentinel-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: sentinel-baseline-backend
+    env_file:
+      - backend/.env.baseline
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:sentinel_baseline_pass@sentinel-db:5432/sentinelaidb_college
+      REDIS_URL: redis://sentinel-redis:6379/0
+    volumes:
+      # The trained model is distributed separately and intentionally kept
+      # outside the Docker image/Git repository.
+      - ./backend/models:/app/models:ro
+      # Keep tests available in the verification container without shipping
+      # them in the production backend image.
+      - ./backend/tests:/app/tests:ro
+    depends_on:
+      sentinel-db:
+        condition: service_healthy
+      sentinel-redis:
+        condition: service_healthy
+    ports:
+      - '18000:8000'
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  sentinel-frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: sentinel-baseline-frontend
+    depends_on:
+      sentinel-backend:
+        condition: service_healthy
+    environment:
+      # The browser reaches the isolated backend through the host port.
+      VITE_API_URL: http://localhost:18000/api/v1
+    ports:
+      - '15174:5174'
+    restart: unless-stopped
+
+volumes:
+  sentinel_baseline_postgres:
+    name: sentinel_baseline_postgres

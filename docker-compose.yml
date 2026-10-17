@@ -1,55 +1,95 @@
-services:
-  api:
-    build:
-      context: .
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-secure_rag}:${POSTGRES_PASSWORD:-secure_rag}@database:5432/${POSTGRES_DB:-secure_rag}
-      REDIS_URL: redis://redis:6379/0
-      UPLOAD_DIRECTORY: /app/uploads
-      MODEL_CACHE_DIRECTORY: /home/appuser/.cache/fastembed
-    ports:
-      - "${API_PORT:-8000}:8000"
-    volumes:
-      - ./uploads:/app/uploads
-      - embedding_cache:/home/appuser/.cache
-    depends_on:
-      database:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
+name: sentinelai-college
 
-  database:
-    image: pgvector/pgvector:pg17
+services:
+  db:
+    image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-secure_rag}
-      POSTGRES_USER: ${POSTGRES_USER:-secure_rag}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_rag}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelaidb_college}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-for-non-local-use}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${SENTINEL_DB_PORT:-5433}:5432'
     volumes:
-      - secure_rag_postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secure_rag} -d ${POSTGRES_DB:-secure_rag}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sentinelaidb_college}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:7-alpine
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - '${SENTINEL_REDIS_PORT:-6380}:6379'
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    environment:
+      APP_NAME: ${APP_NAME:-SentinelAICollege}
+      # Empty SECRET_KEY lets the backend fall back to JWT_SECRET_KEY from an
+      # older local .env during migration. New environments should set it.
+      SECRET_KEY: ${SECRET_KEY:-}
+      ENV: ${ENV:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-change-me-for-non-local-use}@db:5432/${POSTGRES_DB:-sentinelaidb_college}
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://127.0.0.1:5174}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-30}
+      OPENAI_RETRY_COUNT: ${OPENAI_RETRY_COUNT:-1}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      GROQ_MAX_COMPLETION_TOKENS: ${GROQ_MAX_COMPLETION_TOKENS:-1200}
+      GROQ_TIMEOUT_SECONDS: ${GROQ_TIMEOUT_SECONDS:-30}
+      GROQ_RETRY_COUNT: ${GROQ_RETRY_COUNT:-2}
+      REDIS_RATE_LIMIT_WINDOW_SECONDS: ${REDIS_RATE_LIMIT_WINDOW_SECONDS:-60}
+      REDIS_RATE_LIMIT_MAX_REQUESTS: ${REDIS_RATE_LIMIT_MAX_REQUESTS:-100}
+      UPLOAD_DIRECTORY: /app/uploads
+      MODEL_CACHE_DIRECTORY: /app/.model_cache
+    volumes:
+      - ./backend/models:/app/models:ro
+      - rag_uploads:/app/uploads
+      - rag_model_cache:/app/.model_cache
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '${SENTINEL_BACKEND_PORT:-8000}:8000'
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    environment:
+      VITE_API_URL: ${SENTINEL_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '${SENTINEL_FRONTEND_PORT:-5174}:5174'
     restart: unless-stopped
 
 volumes:
-  secure_rag_postgres:
-  embedding_cache:
+  postgres_data:
+  rag_uploads:
+  rag_model_cache:

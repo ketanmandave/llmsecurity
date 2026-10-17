@@ -1,15 +1,56 @@
+node_modules
+node_modules/
+
+# Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
+*.pyo
+*.pyd
+
+# Virtual environments
 venv/
-.model_cache/
+.venv/
+
+# Environment files
 .env
-coverage.xml
-htmlcov/
-uploads/
+.env.*
+
+!.env.example
+
+# SQLite
+*.db
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# Logs
 *.log
-.idea/
+
+# IDE
 .vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+backend/.pytest_cache/
+**/__pycache__/
+frontend/dist/
+*.tsbuildinfo
+backend/data/
+backend/models/
+backend/uploads/
+backend/.model_cache/
+
+# Test caches
+.pytest_cache/
+**/.pytest_cache/
+
+# Generated project tree reports
+project-tree*.txt
